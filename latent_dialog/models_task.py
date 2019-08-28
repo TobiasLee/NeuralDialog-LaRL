@@ -294,12 +294,14 @@ class SysPerfectBD2Cat(BaseModel):
             result = Pack(nll=self.nll(dec_outputs, labels))
             # regularization qy to be uniform
             avg_log_qy = th.exp(log_qy.view(-1, self.config.y_size, self.config.k_size))
+            # average over batch_size and take a log -> self.config.y.size, self.config.k_size
             avg_log_qy = th.log(th.mean(avg_log_qy, dim=0) + 1e-15)
             b_pr = self.cat_kl_loss(avg_log_qy, self.log_uniform_y, batch_size, unit_average=True)
             mi = self.entropy_loss(avg_log_qy, unit_average=True) - self.entropy_loss(log_qy, unit_average=True)
             pi_kl = self.cat_kl_loss(log_qy, log_py, batch_size, unit_average=True)
+
             q_y = th.exp(log_qy).view(-1, self.config.y_size, self.config.k_size)  # b
-            p = th.pow(th.bmm(q_y, th.transpose(q_y, 1, 2)) - self.eye, 2)
+            p = th.pow(th.bmm(q_y, th.transpose(q_y, 1, 2)) - self.eye, 2) # check whether the is a orthogonal
 
             result['pi_kl'] = pi_kl
 

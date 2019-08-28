@@ -28,11 +28,14 @@ class Pack(dict):
                 pack[k] = v
         return pack
 
+
 def get_tokenize():
     return RegexpTokenizer(r'\w+|#\w+|<\w+>|%\w+|[^\w\s]+').tokenize
 
+
 def get_detokenize():
     return lambda x: TreebankWordDetokenizer().detokenize(x)
+
 
 def cast_type(var, dtype, use_gpu):
     if use_gpu:
@@ -55,6 +58,7 @@ def cast_type(var, dtype, use_gpu):
             raise ValueError('Unknown dtype')
     return var
 
+
 def read_lines(file_name):
     """Reads all the lines from the file."""
     assert os.path.exists(file_name), 'file does not exists %s' % file_name
@@ -64,12 +68,14 @@ def read_lines(file_name):
             lines.append(line.strip())
     return lines
 
+
 def set_seed(seed):
     """Sets random seed everywhere."""
     th.manual_seed(seed)
     if th.cuda.is_available():
         th.cuda.manual_seed(seed)
     np.random.seed(seed)
+
 
 def prepare_dirs_loggers(config, script=""):
     logFormatter = logging.Formatter("%(message)s")
@@ -84,7 +90,7 @@ def prepare_dirs_loggers(config, script=""):
     if hasattr(config, 'forward_only') and config.forward_only:
         return
 
-    fileHandler = logging.FileHandler(os.path.join(config.saved_path,'session.log'))
+    fileHandler = logging.FileHandler(os.path.join(config.saved_path, 'session.log'))
     fileHandler.setLevel(logging.DEBUG)
     fileHandler.setFormatter(logFormatter)
     rootLogger.addHandler(fileHandler)

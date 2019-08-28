@@ -92,7 +92,7 @@ class Hidden2Discrete(nn.Module):
         super(Hidden2Discrete, self).__init__()
         self.y_size = y_size
         self.k_size = k_size
-        latent_size = self.k_size*self.y_size
+        latent_size = self.k_size * self.y_size
         if is_lstm:
             self.p_h = nn.Linear(input_size, latent_size, bias=has_bias)
 
@@ -108,7 +108,7 @@ class Hidden2Discrete(nn.Module):
         :return:
         """
         if self.is_lstm:
-            h, c= inputs
+            h, c = inputs
             if h.dim() == 3:
                 h = h.squeeze(0)
                 c = c.squeeze(0)
