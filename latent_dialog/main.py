@@ -437,7 +437,6 @@ def train(model, train_data, val_data, test_data, config, evaluator, gen=None):
                 logger.info('\n***** Epoch {}/{} *****'.format(done_epoch, config.max_epoch))
                 sys.stdout.flush()
 
-g
 def validate(model, val_data, config, batch_cnt=None, use_py=None):
     model.eval()
     val_data.epoch_init(config, shuffle=False, verbose=False)

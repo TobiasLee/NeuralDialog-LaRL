@@ -103,6 +103,29 @@ class BLEUScorer(object):
         return bleu
 
 
+class DiversityScorer(object):
+    def __init__(self, n=2):
+        self.n = n
+    # compute diversity N-gram
+    # it calculates the number of distinct unigrams and bigrams in
+    # generated responses. The value is scaled by total number of generated tokens to avoid favoring long sentences
+    def score(self, hypothesis):
+        """
+        :type hypothesis: list of generated tokens
+        :return diversities: list of diversity-n
+        """
+        diversities = [0.0 for i in range(self.n)]
+        counters = [Counter() for i in range(self.n)]
+        p0 = 1e-7
+        for hyp in hypothesis:
+            for i in range(self.n):
+                counters[i].update(Counter(ngrams(hyp, i + 1)))
+
+        for i in range(self.n):
+            diversities[i] = len(counters[i]) / sum(counters[i].values())
+        return diversities
+
+
 class BleuEvaluator(BaseEvaluator):
     def __init__(self, data_name):
         self.data_name = data_name
@@ -191,6 +214,7 @@ class MultiWozDB(object):
 class MultiWozEvaluator(BaseEvaluator):
     CUR_DIR = os.path.dirname(__file__).replace('latent_dialog', '')
     logger = logging.getLogger()
+
     def __init__(self, data_name):
         self.data_name = data_name
         self.slot_dict = delex.prepareSlotValuesIndependent()
@@ -212,30 +236,30 @@ class MultiWozEvaluator(BaseEvaluator):
         goal[domain] = {}
         goal[domain] = {'informable': [], 'requestable': [], 'booking': []}
         if 'info' in d['goal'][domain]:
-        # if d['goal'][domain].has_key('info'):
+            # if d['goal'][domain].has_key('info'):
             if domain == 'train':
                 # we consider dialogues only where train had to be booked!
                 if 'book' in d['goal'][domain]:
-                # if d['goal'][domain].has_key('book'):
+                    # if d['goal'][domain].has_key('book'):
                     goal[domain]['requestable'].append('reference')
                 if 'reqt' in d['goal'][domain]:
-                # if d['goal'][domain].has_key('reqt'):
+                    # if d['goal'][domain].has_key('reqt'):
                     if 'trainID' in d['goal'][domain]['reqt']:
                         goal[domain]['requestable'].append('id')
             else:
                 if 'reqt' in d['goal'][domain]:
-                # if d['goal'][domain].has_key('reqt'):
+                    # if d['goal'][domain].has_key('reqt'):
                     for s in d['goal'][domain]['reqt']:  # addtional requests:
                         if s in ['phone', 'address', 'postcode', 'reference', 'id']:
                             # ones that can be easily delexicalized
                             goal[domain]['requestable'].append(s)
                 if 'book' in d['goal'][domain]:
-                # if d['goal'][domain].has_key('book'):
+                    # if d['goal'][domain].has_key('book'):
                     goal[domain]['requestable'].append("reference")
 
             goal[domain]["informable"] = d['goal'][domain]['info']
             if 'book' in d['goal'][domain]:
-            # if d['goal'][domain].has_key('book'):
+                # if d['goal'][domain].has_key('book'):
                 goal[domain]["booking"] = d['goal'][domain]['book']
 
         return goal
@@ -360,7 +384,7 @@ class MultiWozEvaluator(BaseEvaluator):
             stats[domain][2] = 1
 
         if soft_acc:
-            match = float(match)/len(goal.keys())
+            match = float(match) / len(goal.keys())
         else:
             if match == len(goal.keys()):
                 match = 1.0
@@ -390,7 +414,7 @@ class MultiWozEvaluator(BaseEvaluator):
 
             # final eval
             if soft_acc:
-                success = float(success)/len(real_requestables)
+                success = float(success) / len(real_requestables)
             else:
                 if success >= len(real_requestables):
                     success = 1
@@ -579,7 +603,7 @@ class MultiWozEvaluator(BaseEvaluator):
             for domain in domains_in_goal:
                 sent_t = m_targetutt[t]
                 # for computing match - where there are limited entities
-                if domain + '_name' in sent_t or domain+'_id' in sent_t:
+                if domain + '_name' in sent_t or domain + '_id' in sent_t:
                     if domain in ['restaurant', 'hotel', 'attraction', 'train']:
                         venue_offered[domain] = '[' + domain + '_name]'
                         """
@@ -604,15 +628,18 @@ class MultiWozEvaluator(BaseEvaluator):
                     if requestable == 'reference':
                         if domain + '_reference' in sent_t:
                             if 'restaurant_reference' in sent_t:
-                                if True or dialog['log'][t * 2]['db_pointer'][-5] == 1:  # if pointer was allowing for that?
+                                if True or dialog['log'][t * 2]['db_pointer'][
+                                    -5] == 1:  # if pointer was allowing for that?
                                     provided_requestables[domain].append('reference')
 
                             elif 'hotel_reference' in sent_t:
-                                if True or dialog['log'][t * 2]['db_pointer'][-3] == 1:  # if pointer was allowing for that?
+                                if True or dialog['log'][t * 2]['db_pointer'][
+                                    -3] == 1:  # if pointer was allowing for that?
                                     provided_requestables[domain].append('reference')
                                     # return goal, 0, match, real_requestables
                             elif 'train_reference' in sent_t:
-                                if True or dialog['log'][t * 2]['db_pointer'][-1] == 1:  # if pointer was allowing for that?
+                                if True or dialog['log'][t * 2]['db_pointer'][
+                                    -1] == 1:  # if pointer was allowing for that?
                                     provided_requestables[domain].append('reference')
 
                             else:
@@ -716,7 +743,7 @@ class MultiWozEvaluator(BaseEvaluator):
                 data = delex_dialogues[filename]
                 goal, success, match, requestables, _ = self._evaluateRealDialogue(data, filename)
                 success, match, stats = self._evaluateGeneratedDialogue(dial, goal, data, requestables,
-                                                                        soft_acc=mode =='offline_rl')
+                                                                        soft_acc=mode == 'offline_rl')
 
             successes += success
             matches += match
@@ -738,7 +765,7 @@ class MultiWozEvaluator(BaseEvaluator):
         report += '{} Corpus Success : {:2.2f}%'.format(mode, (successes / float(total) * 100)) + "\n"
         report += 'Total number of dialogues: %s ' % total
         # self.logger.info(report)
-        return report, successes/float(total), matches/float(total)
+        return report, successes / float(total), matches / float(total)
 
     def get_report(self):
         tokenize = lambda x: x.split()
@@ -760,7 +787,17 @@ class MultiWozEvaluator(BaseEvaluator):
 
         # bleu = corpus_bleu(refs, hyps, smoothing_function=SmoothingFunction().method1)
         bleu = BLEUScorer().score(hyps, refs)
+        d1, d2 = DiversityScorer(n=2).score(hyps)
         prec, rec, f1 = self._get_prec_recall(tp, fp, fn)
-        report = "\nBLEU score {}\nEntity precision {:.4f} recall {:.4f} and f1 {:.4f}\n".format(bleu, prec, rec, f1)
-        return report, bleu, prec, rec, f1
+        report = "\nBLEU score {}\nEntity precision {:.4f} recall {:.4f} and f1 {:.4f} div-1 {:.4f} and div-2 {:.4f}\n".format(bleu, prec, rec, f1, d1, d2)
+        return report, bleu, prec, rec, f1, d1, d2
 
+
+if __name__ == '__main__':
+    # test diversity scorer:
+    div_scorer = DiversityScorer()
+    scores, counters = div_scorer.score([ [1, 2, 3], [1, 2, 3, 3, 3, 3, 4, 5, 3], [1, 2, 3, 3, 3, 2, 3, 2, 3]])
+    print(scores)
+    for c in counters:
+        print(c)
+    print()
